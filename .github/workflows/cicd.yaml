@@ -1,0 +1,321 @@
+name: CI CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  opa:
+    name: "🚧 Unit tests gate"
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+    steps:
+      - name: "⏳ Validate quality using OPA"
+        uses: OpsVerseIO/opa-policy-check@0.1.0
+        with:
+          opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
+          opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
+          opaServerInput: '{"input": null}'
+          opaServerPackageName: "example/include"
+
+  opa-code-coverage:
+    name: "🚧 Code coverage gate"
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+    steps:
+      - name: "⏳ Validate quality using OPA"
+        uses: OpsVerseIO/opa-policy-check@0.1.0
+        with:
+          opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
+          opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
+          opaServerInput: '{"input": null}'
+          opaServerPackageName: "example/include"
+
+  opa-sonarqube:
+    name: "🚧 Static code analysis gate"
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+    steps:
+      - name: "⏳ Validate quality using OPA"
+        uses: OpsVerseIO/opa-policy-check@0.1.0
+        with:
+          opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
+          opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
+          opaServerInput: '{"input": null}'
+          opaServerPackageName: "example/include"
+
+  build:
+    name: "📦 Build docker image"
+    runs-on: ubuntu-latest
+    env:
+      APP_NAME: hello-world-api-dotnet
+    needs:
+      - lint
+      - test
+      - opa
+    timeout-minutes: 10
+    steps:
+      - name: "🔧 Add dynamic envs"
+        run: |
+          echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+          echo "SHA= ${GITHUB_SHA}"
+          echo "SHORT SHA= ${SHORT_SHA}"
+
+      - name: "☁️ checkout repository"
+        uses: actions/checkout@v2
+
+      - name: "🔒 Authenticate to artifactory (Harbor) 🔓"
+        uses: docker/login-action@v1
+        with:
+          registry: registry.devopsnow.io
+          username: ${{ secrets.DEVOPSNOW_DOCKER_INTERNAL_ROBOT_USER }}
+          password: ${{ secrets.DEVOPSNOW_DOCKER_INTERNAL_ROBOT_PASS }}
+
+      - name: "📦 Build the image"
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          tags: "registry.devopsnow.io/internal/hello-world-api-dotnet:${{ env.SHORT_SHA }}"
+
+      - name: "📂 Push the image to artifactory"
+        run: docker push "registry.devopsnow.io/internal/hello-world-api-dotnet:${{ env.SHORT_SHA }}"
+
+
+  update-image-dev:
+    name: "📝 Update dev image tag"
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+      - opa
+      - build
+    timeout-minutes: 10
+    steps:
+      - name: "🔧 Add dynamic envs"
+        id: "image-tag"
+        run: |
+          echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+          echo "SHA= ${GITHUB_SHA}"
+          echo "SHORT SHA= ${SHORT_SHA}"
+          echo "::set-output name=version::$SHORT_SHA"
+
+      - name: Checkout Target Repository
+        uses: actions/checkout@v3
+        with:
+          repository: "OpsVerseIO/node-js-server-manifests"
+          path: main
+          token: ${{ secrets.GH_PAT }}
+
+      - name: "📝 Update Image tag Version in the DEV manifest file"
+        uses: OpsVerseIO/image-updater-action@0.1.0
+        with:
+          repository: "OpsVerseIO/node-js-server-manifests"
+          valueFile: 'manifests/helm/stage/hello-world-api-dotnet/values.yaml'
+          propertyPath: 'nodejssever.image.tag'
+          value: '${{ env.SHORT_SHA }}'
+          branch: main
+          createPR: false
+          message: '[DEV] Update Image tag of hello-world-api-dotnet'
+          token: ${{ secrets.GH_PAT }}
+          workDir: main
+          masterBranchName: main
+          targetBranch: main
+          force: true
+          updateFile: true
+
+  update-image-stage:
+    name: "📝 Update stage image tag"
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+      - opa
+      - build
+    timeout-minutes: 10
+    steps:
+      - name: "🔧 Add dynamic envs"
+        id: "image-tag"
+        run: |
+          echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+          echo "SHA= ${GITHUB_SHA}"
+          echo "SHORT SHA= ${SHORT_SHA}"
+          echo "::set-output name=version::$SHORT_SHA"
+
+      - name: Checkout Target Repository
+        uses: actions/checkout@v3
+        with:
+          repository: "OpsVerseIO/node-js-server-manifests"
+          path: main
+          token: ${{ secrets.GH_PAT }}
+
+      - name: "📝 Update Image tag Version in the STAGE manifest file"
+        uses: OpsVerseIO/image-updater-action@0.1.0
+        with:
+          repository: "OpsVerseIO/node-js-server-manifests"
+          valueFile: 'manifests/stage/deployment.yaml'
+          propertyPath: 'spec.template.spec.containers[0].image'
+          value: 'registry.devopsnow.io/internal/hello-world-api-dotnet:${{ env.SHORT_SHA }}'
+          branch: main
+          createPR: false
+          message: '[STAGE] Update Image tag of hello-world-api-dotnet'
+          token: ${{ secrets.GH_PAT }}
+          workDir: main
+          masterBranchName: main
+          targetBranch: main
+          force: true
+          updateFile: true
+
+  release-stage:
+    name: "⏳ ArgoCD Sync Stage"
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+      - opa
+      - build
+      - update-image-stage
+    timeout-minutes: 10
+    steps:
+      - name: "🔧 Trigger ArgoCD Sync/Deployment in STAGE"
+        uses: OpsVerseIO/argocd-sync@0.1.0
+        with:
+          address: ${{ secrets.ARGOCD_SERVER }}
+          token: ${{ secrets.ARGOCD_TOKEN }}
+          action: sync
+          appName: ${{ secrets.ARGOCD_PROD_APP_NAME }}
+
+      - name: "🚀 Deploy to STAGE"
+        run: |
+            echo "⏳ Deploying the application to STAGE"
+            echo "🚀✅💚 Successfully synced STAGE ArgoCD and deployed the application to STAGE"
+
+  integration-test:
+    name: "🚨 Run integration test suite"
+    needs:
+      - lint
+      - test
+      - opa
+      - build
+      - release-stage
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📩📨 Message from Open Policy Agent (OPA) Server"
+        run: |
+          echo "Running integration test suite"
+          echo "⌛ Connecting to STAGE application at: https://staging-server.opsverse.io"
+          echo "✅💚 Integration tests passed"         
+
+  integration-test-opa:
+    name: "🚧 Integration tests gate"
+    needs:
+      - lint
+      - test
+      - opa
+      - build
+      - release-stage
+      - integration-test
+    runs-on: ubuntu-latest 
+    steps:
+      - name: "⏳ Validate quality using OPA"
+        uses: OpsVerseIO/opa-policy-check@0.1.0
+        with:
+          opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
+          opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
+          opaServerInput: '{"input": null}'
+          opaServerPackageName: "example/include"
+
+  update-image-prod:
+    name: "📝 Update prod image tag"
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+      - opa
+      - build
+      - release-stage
+      - integration-test
+      - integration-test-opa
+    timeout-minutes: 10
+    steps:
+      - name: "🔧 Add dynamic envs"
+        id: "image-tag"
+        run: |
+          echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+          echo "SHA= ${GITHUB_SHA}"
+          echo "SHORT SHA= ${SHORT_SHA}"
+          echo "::set-output name=version::$SHORT_SHA"
+
+      - name: Checkout Target Repository
+        uses: actions/checkout@v3
+        with:
+          repository: "OpsVerseIO/node-js-server-manifests"
+          path: main
+          token: ${{ secrets.GH_PAT }}
+
+      - name: "📝 Update Image tag Version in the PROD manifest file"
+        uses: OpsVerseIO/image-updater-action@0.1.0
+        with:
+          repository: "OpsVerseIO/node-js-server-manifests"
+          valueFile: 'manifests/prod/deployment.yaml'
+          propertyPath: 'spec.template.spec.containers[0].image'
+          value: 'registry.devopsnow.io/internal/hello-world-api-dotnet:${{ env.SHORT_SHA }}'
+          branch: main
+          createPR: false
+          message: '[PROD] Update Image tag of hello-world-api-dotnet'
+          token: ${{ secrets.GH_PAT }}
+          workDir: main
+          masterBranchName: main
+          targetBranch: main
+          force: true
+          updateFile: true
+
+  release-prod:
+    environment:
+      name: production
+    name: "🚀 Deploy to PROD"
+    needs:
+      - lint
+      - test
+      - opa
+      - build
+      - release-stage
+      - integration-test
+      - integration-test-opa
+      - update-image-prod
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      
+      - name: "🔧 Trigger ArgoCD Sync/Deployment in PROD"
+        uses: OpsVerseIO/argocd-sync@0.1.0
+        with:
+          address: ${{ secrets.ARGOCD_SERVER }}
+          token: ${{ secrets.ARGOCD_TOKEN }}
+          action: sync
+          appName: ${{ secrets.ARGOCD_PROD_APP_NAME }}
+
+      - name: "🚀 Deploy to PROD ENV"
+        run: |
+          echo "⏳ Deploying the application to PROD"
+          echo "🚀✅💚 Successfully synced PROD ArgoCD and deployed the application to PROD"
+
+  cleanup:
+    name: "♻️ Cleanup actions"
+    needs:
+      - release-stage
+      - release-prod
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: "♻️ remove build artifacts"
+        run: |
+          echo "♻️ Cleaning up the build artifacts"
+          echo "♻️✅ Successfully cleaned up the build artifacts"
