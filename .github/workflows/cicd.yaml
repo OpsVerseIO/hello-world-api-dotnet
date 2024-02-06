@@ -109,8 +109,8 @@ jobs:
         uses: OpsVerseIO/image-updater-action@0.1.0
         with:
           repository: "OpsVerseIO/node-js-server-manifests"
-          valueFile: 'manifests/helloworldapidotnet/helm/stage/values.yaml'
-          propertyPath: 'hello-world-api-dotnet.image.tag'
+          valueFile: 'manifests/hello-world-api-dotnet/helm/stage/values.yaml'
+          propertyPath: 'helloworldapidotnet.image.tag'
           value: '${{ env.SHORT_SHA }}'
           branch: main
           createPR: false
@@ -213,8 +213,8 @@ jobs:
         uses: OpsVerseIO/image-updater-action@0.1.0
         with:
           repository: "OpsVerseIO/node-js-server-manifests"
-          valueFile: 'manifests/helloworldapidotnet/helm/prod/values.yaml'
-          propertyPath: 'spec.template.spec.containers[0].image'
+          valueFile: 'manifests/hello-world-api-dotnet/helm/prod/values.yaml'
+          propertyPath: 'helloworldapidotnet.image.tag'
           value: 'registry.devopsnow.io/internal/hello-world-api-dotnet:${{ env.SHORT_SHA }}'
           branch: main
           createPR: false
