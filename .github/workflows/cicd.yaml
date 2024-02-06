@@ -44,7 +44,7 @@ jobs:
           opaServerPackageName: "example/include"
 
   build:
-    name: "📦 Build docker image"
+    name: "📦 Build the docker image and push it to OpsVerse Harbor artifactory"
     runs-on: ubuntu-latest
     env:
       APP_NAME: hello-world-api-dotnet
@@ -215,7 +215,7 @@ jobs:
           repository: "OpsVerseIO/node-js-server-manifests"
           valueFile: 'manifests/hello-world-api-dotnet/helm/prod/values.yaml'
           propertyPath: 'helloworldapidotnet.image.tag'
-          value: 'registry.devopsnow.io/internal/hello-world-api-dotnet:${{ env.SHORT_SHA }}'
+          value: '${{ env.SHORT_SHA }}'
           branch: main
           createPR: false
           message: '[PROD] Update Image tag of hello-world-api-dotnet'
