@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "HelloWorldRestApp/1.0.0": {
+        "runtime": {
+          "HelloWorldRestApp.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "HelloWorldRestApp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
