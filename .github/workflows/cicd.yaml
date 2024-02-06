@@ -101,15 +101,15 @@ jobs:
       - name: Checkout Target Repository
         uses: actions/checkout@v3
         with:
-          repository: "OpsVerseIO/node-js-server-manifests"
+          repository: "OpsVerseIO/deployment-manifests"
           path: main
           token: ${{ secrets.GH_PAT }}
 
       - name: "📝 Update Image tag Version in the DEV manifest file"
         uses: OpsVerseIO/image-updater-action@0.1.0
         with:
-          repository: "OpsVerseIO/node-js-server-manifests"
-          valueFile: 'manifests/hello-world-api-dotnet/helm/stage/values.yaml'
+          repository: "OpsVerseIO/deployment-manifests"
+          valueFile: 'hello-world-api-dotnet/helm/stage/values.yaml'
           propertyPath: 'helloworldapidotnet.image.tag'
           value: '${{ env.SHORT_SHA }}'
           branch: main
@@ -205,15 +205,15 @@ jobs:
       - name: Checkout Target Repository
         uses: actions/checkout@v3
         with:
-          repository: "OpsVerseIO/node-js-server-manifests"
+          repository: "OpsVerseIO/deployment-manifests"
           path: main
           token: ${{ secrets.GH_PAT }}
 
       - name: "📝 Update Image tag Version in the PROD manifest file"
         uses: OpsVerseIO/image-updater-action@0.1.0
         with:
-          repository: "OpsVerseIO/node-js-server-manifests"
-          valueFile: 'manifests/hello-world-api-dotnet/helm/prod/values.yaml'
+          repository: "OpsVerseIO/deployment-manifests"
+          valueFile: 'hello-world-api-dotnet/helm/prod/values.yaml'
           propertyPath: 'helloworldapidotnet.image.tag'
           value: '${{ env.SHORT_SHA }}'
           branch: main
