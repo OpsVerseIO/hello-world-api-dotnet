@@ -44,7 +44,7 @@ jobs:
           opaServerPackageName: "example/include"
 
   build:
-    name: "📦 Build the docker image and push it to OpsVerse Harbor artifactory"
+    name: "📦 Build docker image and push to Amazon ECR"
     runs-on: ubuntu-latest
     env:
       APP_NAME: hello-world-api-dotnet
@@ -63,22 +63,25 @@ jobs:
       - name: "☁️ checkout repository"
         uses: actions/checkout@v2
 
-      - name: "🔒 Authenticate to artifactory (Harbor) 🔓"
-        uses: docker/login-action@v1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          registry: registry.devopsnow.io
-          username: ${{ secrets.DEVOPSNOW_DOCKER_INTERNAL_ROBOT_USER }}
-          password: ${{ secrets.DEVOPSNOW_DOCKER_INTERNAL_ROBOT_PASS }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
 
-      - name: "📦 Build the image"
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          tags: "registry.devopsnow.io/internal/hello-world-api-dotnet:${{ env.SHORT_SHA }}"
+      - name: "🔒 Login to Amazon ECR 🔓"
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: "📂 Push the image to artifactory"
-        run: docker push "registry.devopsnow.io/internal/hello-world-api-dotnet:${{ env.SHORT_SHA }}"
-
+      - name: "📦📂 Build, tag, and push docker image to Amazon ECR"
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: "opsverse-registry"
+          IMAGE_TAG: ${{ env.SHORT_SHA }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
   update-image-stage:
     name: "📝 Update STAGE image tag"
