@@ -137,12 +137,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: "🔧 Trigger ArgoCD Sync/Deployment in STAGE"
-        uses: OpsVerseIO/argocd-sync@0.1.0
+        uses: OpsVerseIO/argocd-sync@0.2.0
         with:
           address: ${{ secrets.ARGOCD_SERVER }}
           token: ${{ secrets.ARGOCD_TOKEN }}
           action: sync
           appName: ${{ secrets.ARGOCD_PROD_APP_NAME }}
+          disableTlsVerification: "true"
 
       - name: "🚀 Deploy to STAGE"
         run: |
@@ -246,12 +247,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: "🔧 Trigger ArgoCD Sync/Deployment in PROD"
-        uses: OpsVerseIO/argocd-sync@0.1.0
+        uses: OpsVerseIO/argocd-sync@0.2.0
         with:
           address: ${{ secrets.ARGOCD_SERVER }}
           token: ${{ secrets.ARGOCD_TOKEN }}
           action: sync
           appName: ${{ secrets.ARGOCD_PROD_APP_NAME }}
+          disableTlsVerification: "true"
 
       - name: "🚀 Deploy to PROD ENV"
         run: |
