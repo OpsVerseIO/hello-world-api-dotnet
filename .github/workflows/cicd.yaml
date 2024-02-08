@@ -137,7 +137,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: "🔧 Trigger ArgoCD Sync/Deployment in STAGE"
-        uses: OpsVerseIO/argocd-sync@0.2.0
+        uses: opsverseio/argocd-sync@0.2.0
         with:
           address: ${{ secrets.ARGOCD_SERVER }}
           token: ${{ secrets.ARGOCD_TOKEN }}
@@ -247,7 +247,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: "🔧 Trigger ArgoCD Sync/Deployment in PROD"
-        uses: OpsVerseIO/argocd-sync@0.2.0
+        uses: opsverseio/argocd-sync@0.2.0
         with:
           address: ${{ secrets.ARGOCD_SERVER }}
           token: ${{ secrets.ARGOCD_TOKEN }}
