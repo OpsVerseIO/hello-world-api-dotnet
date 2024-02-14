@@ -39,7 +39,7 @@ jobs:
       - name: "⏳ Validate quality using OPA"
         uses: OpsVerseIO/opa-policy-check@0.1.0
         with:
-          opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
+          opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
           opaServerInput: '{"input": null}'
           opaServerPackageName: "example/include"
@@ -53,7 +53,7 @@ jobs:
       - name: "⏳ Validate quality using OPA"
         uses: OpsVerseIO/opa-policy-check@0.2.0
         with:
-          opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
+          opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
           opaServerInput: '{"input": null}'
           opaServerPackageName: "example/include"
@@ -68,7 +68,7 @@ jobs:
       - name: "⏳ Validate quality using OPA"
         uses: OpsVerseIO/opa-policy-check@0.2.0
         with:
-          opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
+          opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
           opaServerInput: '{"input": null}'
           opaServerPackageName: "example/include"
