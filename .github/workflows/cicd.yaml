@@ -21,14 +21,16 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
       - name: SonarQube Quality Gate check
         id: sonarqube-quality-gate-check
-        uses: sonarsource/sonarqube-quality-gate-action@master
+        uses: opsverseio/sonarqube-quality-gate-action@0.2.0
         # Force to fail step after specific time.
         timeout-minutes: 5
         env:
          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+         SET_SONAR_PROJECT_STATUS: true
     outputs:
       sonarcloud_output: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}
+      sonar_quality_gate_project_status: ${{ steps.sonarqube-quality-gate-check.outputs.quality_gate_project_status }}
 
   opa:
     name: "🚧 Unit tests gate"
@@ -37,12 +39,13 @@ jobs:
       - sonarqube
     steps:
       - name: "⏳ Validate quality using OPA"
-        uses: OpsVerseIO/opa-policy-check@0.1.0
+        uses: OpsVerseIO/opa-policy-check@0.3.0
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": null}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarcloud.outputs.sonarcloud_output}}", "environment": "unit-test"}}'
           opaServerPackageName: "example/include"
+          skipTlsValidation: true
 
   opa-code-coverage:
     name: "🚧 Code coverage gate"
@@ -51,11 +54,11 @@ jobs:
       - sonarqube
     steps:
       - name: "⏳ Validate quality using OPA"
-        uses: OpsVerseIO/opa-policy-check@0.2.0
+        uses: OpsVerseIO/opa-policy-check@0.3.0
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": null}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarcloud.outputs.sonarcloud_output}}", "environment": "code-coverage"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
@@ -66,11 +69,11 @@ jobs:
       - sonarqube
     steps:
       - name: "⏳ Validate quality using OPA"
-        uses: OpsVerseIO/opa-policy-check@0.2.0
+        uses: OpsVerseIO/opa-policy-check@0.3.0
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": null}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarcloud.outputs.sonarcloud_output}}", "environment": "static-code-analysis"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
@@ -214,11 +217,11 @@ jobs:
     runs-on: ubuntu-latest 
     steps:
       - name: "⏳ Validate quality using OPA"
-        uses: OpsVerseIO/opa-policy-check@0.2.0
+        uses: OpsVerseIO/opa-policy-check@0.3.0
         with:
           opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": null}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarcloud.outputs.sonarcloud_output}}", "environment": "static-code-analysis"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
