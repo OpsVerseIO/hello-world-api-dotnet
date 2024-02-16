@@ -38,6 +38,10 @@ jobs:
     needs:
       - sonarqube
     steps:
+      - name: "Print Output"
+        run: |
+          echo ${{needs.sonarcloud.outputs.sonarcloud_output}}
+          echo ${{needs.sonarcloud.outputs.sonar_quality_gate_project_status}}
       - name: "⏳ Validate quality using OPA"
         uses: OpsVerseIO/opa-policy-check@0.3.0
         with:
