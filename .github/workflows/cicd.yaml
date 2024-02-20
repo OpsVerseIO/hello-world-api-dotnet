@@ -19,9 +19,10 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
       - name: SonarQube Quality Gate check
         id: sonarqube-quality-gate-check
-        uses: opsverseio/sonarqube-quality-gate-action@0.3.0-ALPHA-2
+        uses: opsverseio/sonarqube-quality-gate-action@0.3.0
         # Force to fail step after specific time.
         timeout-minutes: 5
         env:
@@ -29,27 +30,39 @@ jobs:
          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
          SET_SONAR_PROJECT_STATUS: true
          METRIC_NAME: "new_coverage"
-    outputs:
-      sonarcloud_output: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}
-      sonar_quality_gate_project_status: ${{ steps.sonarqube-quality-gate-check.outputs.quality_gate_project_status }}
 
-  fetch-reliability-rating:
-    name: Fetch Reliability Metric
-    runs-on: ubuntu-latest
-    needs:
-      - sonarqube
-    steps:
-      - name: Fetch Reliability and Security related metric
-        id: fetch-scores
+      - name: "📊☁️ Fetch Reliability Rating Metric"
+        id: fetch-reliability-rating
         run: |
           # Fetching data from SonarQube
           response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=reliability_rating")
           
-          # Extracting reliability and security ratings
+          # Extracting reliability ratings
           reliability_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="reliability_rating") | .value')
           
           # Setting the scores as outputs
           echo "::set-output name=reliability::$reliability_score"
+          # Print the Reliability rating score/metric
+          echo "Reliability Score: ${{ steps.fetch-scores.outputs.reliability }}"
+
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONARQUBE_PROJECT_KEY: ${{ secrets.SONARQUBE_PROJECT_KEY }}
+          SONARQUBE_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+
+      - name: "📊🔐 Fetch Security Rating Metric"
+        id: fetch-security-rating
+        run: |
+          # Fetching data from SonarQube
+          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=security_rating")
+          
+          # Extracting security ratings
+          security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
+          
+          # Setting the scores as outputs
+          echo "::set-output name=security::$security_score"
+          # Print the Security rating score/metric
+          echo "Security Score: ${{ steps.fetch-scores.outputs.security }}"
 
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -58,14 +71,17 @@ jobs:
 
       - name: Use Scores in Subsequent Step
         run: |
-          echo "Reliability Score: ${{ steps.fetch-scores.outputs.reliability }}"
+          echo "Security Score: ${{ steps.fetch-scores.outputs.security }}"
+          
+    outputs:
+      sonarcloud_output: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}
+      sonar_quality_gate_project_status: ${{ steps.sonarqube-quality-gate-check.outputs.quality_gate_project_status }}
 
   opa-reliability-gate:
     name: "🚧 OPA Reliability gate"
     runs-on: ubuntu-latest
     needs:
       - sonarqube
-      - fetch-reliability-rating
     steps:
       - name: "⏳ Validate Reliability score using OPA"
         uses: OpsVerseIO/opa-policy-check@0.3.0
@@ -76,39 +92,11 @@ jobs:
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
-  fetch-security-rating:
-    name: Fetch Security Metric
-    runs-on: ubuntu-latest
-    needs:
-      - sonarqube 
-    steps:
-      - name: Fetch Security metric
-        id: fetch-scores
-        run: |
-          # Fetching data from SonarQube
-          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=security_rating")
-          
-          # Extracting reliability and security ratings
-          security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
-          
-          # Setting the scores as outputs
-          echo "::set-output name=security::$security_score"
-
-        env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          SONARQUBE_PROJECT_KEY: ${{ secrets.SONARQUBE_PROJECT_KEY }}
-          SONARQUBE_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
-
-      - name: Use Scores in Subsequent Step
-        run: |
-          echo "Security Score: ${{ steps.fetch-scores.outputs.security }}"
-
   opa-security-gate:
     name: "🚧 OPA Security gate"
     runs-on: ubuntu-latest
     needs:
       - sonarqube
-      - fetch-security-rating
     steps:
       - name: "⏳ Validate Security score using OPA"
         uses: OpsVerseIO/opa-policy-check@0.3.0
@@ -175,9 +163,7 @@ jobs:
       APP_NAME: hello-world-api-dotnet
     needs:
       - sonarqube
-      - fetch-reliability-rating
       - opa-reliability-gate
-      - fetch-security-rating
       - opa-security-gate
       - opa
       - opa-code-coverage
@@ -218,9 +204,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - sonarqube
-      - fetch-reliability-rating
       - opa-reliability-gate
-      - fetch-security-rating
       - opa-security-gate
       - opa
       - opa-code-coverage
@@ -265,9 +249,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - sonarqube
-      - fetch-reliability-rating
       - opa-reliability-gate
-      - fetch-security-rating
       - opa-security-gate
       - opa
       - opa-code-coverage
@@ -294,9 +276,7 @@ jobs:
     name: "🚨 Run integration test suite"
     needs:
       - sonarqube
-      - fetch-reliability-rating
       - opa-reliability-gate
-      - fetch-security-rating
       - opa-security-gate
       - opa
       - opa-code-coverage
@@ -315,9 +295,7 @@ jobs:
     name: "🚧 Integration tests gate"
     needs:
       - sonarqube
-      - fetch-reliability-rating
       - opa-reliability-gate
-      - fetch-security-rating
       - opa-security-gate
       - opa
       - opa-code-coverage
@@ -341,9 +319,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - sonarqube
-      - fetch-reliability-rating
       - opa-reliability-gate
-      - fetch-security-rating
       - opa-security-gate
       - opa
       - opa-code-coverage
@@ -392,9 +368,7 @@ jobs:
     name: "🚀 Deploy to PROD (ArgoCD Sync)"
     needs:
       - sonarqube
-      - fetch-reliability-rating
       - opa-reliability-gate
-      - fetch-security-rating
       - opa-security-gate
       - opa
       - opa-code-coverage
