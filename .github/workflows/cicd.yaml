@@ -43,7 +43,7 @@ jobs:
           # Setting the scores as outputs
           echo "::set-output name=reliability::$reliability_score"
           # Print the Reliability rating score/metric
-          echo "Reliability Score: ${{ steps.fetch-scores.outputs.reliability }}"
+          echo "Reliability Score: ${{ steps.fetch-reliability-rating.outputs.reliability }}"
 
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -71,7 +71,7 @@ jobs:
 
       - name: Use Scores in Subsequent Step
         run: |
-          echo "Security Score: ${{ steps.fetch-scores.outputs.security }}"
+          echo "Security Score: ${{ steps.fetch-security-rating.outputs.security }}"
           
     outputs:
       sonarcloud_output: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}
