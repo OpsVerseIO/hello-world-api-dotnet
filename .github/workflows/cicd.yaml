@@ -41,15 +41,16 @@ jobs:
         id: fetch-scores
         run: |
           # Fetching data from SonarQube
-          response=$(curl -s -u ${{ secrets.SONARQUBE_TOKEN }}: "$SONARQUBE_URL/api/measures/component?component=$SONARQUBE_PROJECT_KEY&metricKeys=reliability_rating,security_rating")
+          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "https://sonarqube.int.devopsnow.io/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=reliability_rating")
           
           # Extracting reliability and security ratings
           reliability_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="reliability_rating") | .value')
-          security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
+          # security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
           
           # Setting the scores as outputs
           echo "::set-output name=reliability::$reliability_score"
           echo "::set-output name=security::$security_score"
+          echo $reliability_score
         env:
           SONARQUBE_URL: ${{ secrets.SONARQUBE_URL }}
           SONARQUBE_PROJECT_KEY: ${{ secrets.SONARQUBE_PROJECT_KEY }}
