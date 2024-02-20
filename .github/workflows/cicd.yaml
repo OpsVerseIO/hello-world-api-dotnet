@@ -105,7 +105,7 @@ jobs:
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.security_score}}", "metric": "unit-test"}}'
+          opaServerInput: '{"input": { "status": "${{ steps.fetch-security-rating.outputs.security }}", "metric": "unit-test"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
