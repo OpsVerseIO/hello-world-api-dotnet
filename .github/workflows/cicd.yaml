@@ -80,7 +80,7 @@ jobs:
       security_score: ${{ steps.fetch-security-rating.outputs.security }}
 
   opa-reliability-gate:
-    name: "🚧 OPA Reliability gate"
+    name: "🚧 Reliability gate"
     runs-on: ubuntu-latest
     needs:
       - sonarqube
@@ -90,12 +90,12 @@ jobs:
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": { "status": "${{needs.fetch-reliability-rating.outputs.reliability}}", "metric": "unit-test"}}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.reliability}}", "metric": "unit-test"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
   opa-security-gate:
-    name: "🚧 OPA Security gate"
+    name: "🚧 Security gate"
     runs-on: ubuntu-latest
     needs:
       - sonarqube
@@ -105,7 +105,7 @@ jobs:
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": { "status": "${{needs.fetch-security-rating.outputs.security}}", "metric": "unit-test"}}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.security}}", "metric": "unit-test"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
