@@ -33,6 +33,33 @@ jobs:
       sonarcloud_output: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}
       sonar_quality_gate_project_status: ${{ steps.sonarqube-quality-gate-check.outputs.quality_gate_project_status }}
 
+  fetch-metrics:
+    name: Fetch SonarQube metrics
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Reliability and Security related metrics
+        id: fetch-scores
+        run: |
+          # Fetching data from SonarQube
+          response=$(curl -s -u ${{ secrets.SONARQUBE_TOKEN }}: "$SONARQUBE_URL/api/measures/component?component=$SONARQUBE_PROJECT_KEY&metricKeys=reliability_rating,security_rating")
+          
+          # Extracting reliability and security ratings
+          reliability_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="reliability_rating") | .value')
+          security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
+          
+          # Setting the scores as outputs
+          echo "::set-output name=reliability::$reliability_score"
+          echo "::set-output name=security::$security_score"
+        env:
+          SONARQUBE_URL: ${{ secrets.SONARQUBE_URL }}
+          SONARQUBE_PROJECT_KEY: ${{ secrets.SONARQUBE_PROJECT_KEY }}
+          SONARQUBE_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+
+      - name: Use Scores in Subsequent Step
+        run: |
+          echo "Reliability Score: ${{ steps.fetch-scores.outputs.reliability }}"
+          echo "Security Score: ${{ steps.fetch-scores.outputs.security }}"
+
   opa:
     name: "🚧 Unit tests gate"
     runs-on: ubuntu-latest
