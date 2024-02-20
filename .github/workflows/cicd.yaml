@@ -62,7 +62,7 @@ jobs:
           # Setting the scores as outputs
           echo "::set-output name=security::$security_score"
           # Print the Security rating score/metric
-          echo "Security Score: ${{ steps.fetch-scores.outputs.security }}"
+          echo "Security Score: ${{ steps.fetch-security-rating.outputs.security }}"
 
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
