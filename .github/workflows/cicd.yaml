@@ -33,33 +33,85 @@ jobs:
       sonarcloud_output: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}
       sonar_quality_gate_project_status: ${{ steps.sonarqube-quality-gate-check.outputs.quality_gate_project_status }}
 
-  fetch-metrics:
-    name: Fetch SonarQube metrics
+  fetch-reliability-rating:
+    name: Fetch Reliability Metric
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch Reliability and Security related metrics
+      - name: Fetch Reliability and Security related metric
         id: fetch-scores
         run: |
           # Fetching data from SonarQube
-          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "https://sonarqube.int.devopsnow.io/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=reliability_rating")
+          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=reliability_rating")
           
           # Extracting reliability and security ratings
           reliability_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="reliability_rating") | .value')
-          # security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
           
           # Setting the scores as outputs
           echo "::set-output name=reliability::$reliability_score"
-          echo "::set-output name=security::$security_score"
-          echo $reliability_score
+
         env:
-          SONARQUBE_URL: ${{ secrets.SONARQUBE_URL }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
           SONARQUBE_PROJECT_KEY: ${{ secrets.SONARQUBE_PROJECT_KEY }}
           SONARQUBE_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
 
       - name: Use Scores in Subsequent Step
         run: |
           echo "Reliability Score: ${{ steps.fetch-scores.outputs.reliability }}"
+
+  opa-reliability-gate:
+    name: "🚧 OPA Reliability gate"
+    runs-on: ubuntu-latest
+    needs:
+      - sonarqube
+    steps:
+      - name: "⏳ Validate Reliability score using OPA"
+        uses: OpsVerseIO/opa-policy-check@0.3.0
+        with:
+          opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
+          opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
+          opaServerInput: '{"input": { "status": "${{needs.fetch-reliability-rating.outputs.reliability}}", "metric": "unit-test"}}'
+          opaServerPackageName: "example/include"
+          skipTlsValidation: true
+
+  fetch-security-rating:
+    name: Fetch Security Metric
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Security metric
+        id: fetch-scores
+        run: |
+          # Fetching data from SonarQube
+          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=security_rating")
+          
+          # Extracting reliability and security ratings
+          security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
+          
+          # Setting the scores as outputs
+          echo "::set-output name=security::$security_score"
+
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONARQUBE_PROJECT_KEY: ${{ secrets.SONARQUBE_PROJECT_KEY }}
+          SONARQUBE_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+
+      - name: Use Scores in Subsequent Step
+        run: |
           echo "Security Score: ${{ steps.fetch-scores.outputs.security }}"
+
+  opa-security-gate:
+    name: "🚧 OPA Security gate"
+    runs-on: ubuntu-latest
+    needs:
+      - sonarqube
+    steps:
+      - name: "⏳ Validate Security score using OPA"
+        uses: OpsVerseIO/opa-policy-check@0.3.0
+        with:
+          opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
+          opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
+          opaServerInput: '{"input": { "status": "${{needs.fetch-security-rating.outputs.security}}", "metric": "unit-test"}}'
+          opaServerPackageName: "example/include"
+          skipTlsValidation: true
 
   opa:
     name: "🚧 Unit tests gate"
