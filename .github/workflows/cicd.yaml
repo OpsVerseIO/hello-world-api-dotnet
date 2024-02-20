@@ -22,7 +22,7 @@ jobs:
 
       - name: SonarQube Quality Gate check
         id: sonarqube-quality-gate-check
-        uses: opsverseio/sonarqube-quality-gate-action@0.3.0
+        uses: opsverseio/sonarqube-quality-gate-action@0.2.0
         # Force to fail step after specific time.
         timeout-minutes: 5
         env:
