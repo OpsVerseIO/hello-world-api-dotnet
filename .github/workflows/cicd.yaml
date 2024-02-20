@@ -39,11 +39,14 @@ jobs:
           
           # Extracting reliability ratings
           reliability_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="reliability_rating") | .value')
+          best_reliability_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .bestValue')
           
           # Setting the scores as outputs
           echo "::set-output name=reliability::$reliability_score"
+          echo "::set-output name=best_reliability::$best_reliability_score"
           # Print the Reliability rating score/metric
           echo "Reliability Score: ${{ steps.fetch-reliability-rating.outputs.reliability }}"
+          echo "Best/Allowed Reliability Score: ${{ steps.fetch-reliability-rating.outputs.best_reliability_score }}"
 
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -58,11 +61,14 @@ jobs:
           
           # Extracting security ratings
           security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
+          best_security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .bestValue')
           
           # Setting the scores as outputs
           echo "::set-output name=security::$security_score"
+          echo "::set-output name=best_security::$best_security_score"
           # Print the Security rating score/metric
           echo "Security Score: ${{ steps.fetch-security-rating.outputs.security }}"
+          echo "Best/Allowed Security Score: ${{ steps.fetch-security-rating.outputs.best_security_score }}"
 
         env:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -77,7 +83,9 @@ jobs:
       sonarcloud_output: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}
       sonar_quality_gate_project_status: ${{ steps.sonarqube-quality-gate-check.outputs.quality_gate_project_status }}
       reliability_score: ${{ steps.fetch-reliability-rating.outputs.reliability }}
+      best_reliability_score: ${{ steps.fetch-reliability-rating.outputs.best_reliability_score }}
       security_score: ${{ steps.fetch-security-rating.outputs.security }}
+      best_security_score: ${{ steps.fetch-reliability-rating.outputs.best_security_score }}
 
   opa-reliability-gate:
     name: "🚧 Reliability gate"
@@ -90,7 +98,8 @@ jobs:
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.reliability_score}}", "metric": "unit-test"}}'
+          # opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.reliability_score}}", "metric": "unit-test"}}'
+          opaServerInput: '{"input": { "metricValue": "${{needs.sonarqube.outputs.reliability_score}}", "metricName": "reliability_rating"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
@@ -105,7 +114,8 @@ jobs:
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.security_score}}", "metric": "unit-test"}}'
+          # opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.security_score}}", "metric": "unit-test"}}'
+          opaServerInput: '{"input": { "metricValue": "${{needs.sonarqube.outputs.security_score}}", "metricName": "security_rating"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
