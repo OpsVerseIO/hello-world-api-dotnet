@@ -90,7 +90,7 @@ jobs:
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.reliability}}", "metric": "unit-test"}}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.reliability_score}}", "metric": "unit-test"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
@@ -105,7 +105,7 @@ jobs:
         with:
           opaServerUrl: "http://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.security}}", "metric": "unit-test"}}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.security_score}}", "metric": "unit-test"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
