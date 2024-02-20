@@ -76,6 +76,8 @@ jobs:
     outputs:
       sonarcloud_output: ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}
       sonar_quality_gate_project_status: ${{ steps.sonarqube-quality-gate-check.outputs.quality_gate_project_status }}
+      reliability_score: ${{ steps.fetch-reliability-rating.outputs.reliability }}
+      security_score: ${{ steps.fetch-security-rating.outputs.security }}
 
   opa-reliability-gate:
     name: "🚧 OPA Reliability gate"
