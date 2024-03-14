@@ -325,7 +325,8 @@ jobs:
         with:
           opaServerUrl: "https://opa-opsverse.int.devopsnow.io"
           opaServerAuthToken: ${{ secrets.OPA_SERVER_AUTH_TOKEN }}
-          opaServerInput: '{"input": { "status": "${{needs.sonarcloud.outputs.sonarcloud_output}}", "metric": "static-code-analysis"}}'
+          # opaServerInput: '{"input": { "status": "${{needs.sonarcloud.outputs.sonarcloud_output}}", "metric": "static-code-analysis"}}'
+          opaServerInput: '{"input": { "status": "${{needs.sonarqube.outputs.security_score}}", "metric": "reliability_score"}}'
           opaServerPackageName: "example/include"
           skipTlsValidation: true
 
