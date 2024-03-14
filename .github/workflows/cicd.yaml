@@ -35,7 +35,7 @@ jobs:
         id: fetch-reliability-rating
         run: |
           # Fetching data from SonarQube
-          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=reliability_rating")
+          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_1020c653-2d20-42f8-9366-4c815193b787&metricKeys=reliability_rating")
           
           # Extracting reliability ratings
           reliability_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="reliability_rating") | .value')
@@ -57,7 +57,7 @@ jobs:
         id: fetch-security-rating
         run: |
           # Fetching data from SonarQube
-          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_fbb1f479-d532-46dd-b86d-c63f33391fe3&metricKeys=security_rating")
+          response=$(curl --location --location-trusted --max-redirs 10 --silent --fail --show-error --user ${{ secrets.SONARQUBE_TOKEN }}: "${{ secrets.SONAR_HOST_URL }}/api/measures/component?component=OpsVerseIO_hello-world-api-dotnet_1020c653-2d20-42f8-9366-4c815193b787&metricKeys=security_rating")
           
           # Extracting security ratings
           security_score=$(echo $response | jq -r '.component.measures[] | select(.metric=="security_rating") | .value')
