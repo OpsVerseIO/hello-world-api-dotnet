@@ -1,0 +1,105 @@
+name: Argo CD Sync
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build:
+    name: "📦 Build docker image and push to Amazon ECR"
+    runs-on: ubuntu-latest
+    env:
+      APP_NAME: hello-world-api-dotnet
+    timeout-minutes: 10
+    steps:
+      - name: "🔧 Add dynamic envs"
+        run: |
+          echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+          echo "SHA= ${GITHUB_SHA}"
+          echo "SHORT SHA= ${SHORT_SHA}"
+
+      - name: "☁️ checkout repository"
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      - name: "🔒 Login to Amazon ECR 🔓"
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: "📦📂 Build, tag, and push docker image to Amazon ECR"
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: "hello-world-api-dotnet"
+          IMAGE_TAG: ${{ env.SHORT_SHA }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+  update-image-stage:
+    name: "📝 Update STAGE image tag"
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    timeout-minutes: 10
+    steps:
+      - name: "🔧 Add dynamic envs"
+        id: "image-tag"
+        run: |
+          echo "SHORT_SHA=`echo ${GITHUB_SHA} | cut -c1-8`" >> $GITHUB_ENV
+          echo "SHA= ${GITHUB_SHA}"
+          echo "SHORT SHA= ${SHORT_SHA}"
+          echo "::set-output name=version::$SHORT_SHA"
+
+      - name: Checkout Target Repository
+        uses: actions/checkout@v3
+        with:
+          repository: "OpsVerseIO/deployment-manifests"
+          path: main
+          token: ${{ secrets.GH_PAT }}
+
+      - name: "📝 Update Image tag Version in the DEV manifest file"
+        uses: OpsVerseIO/image-updater-action@0.1.0
+        with:
+          repository: "OpsVerseIO/deployment-manifests"
+          valueFile: 'hello-world-api-dotnet/helm/stage/values.yaml'
+          propertyPath: 'helloworldapidotnet.image.tag'
+          value: '${{ env.SHORT_SHA }}'
+          branch: main
+          createPR: false
+          message: '[STAGE] Update Image tag of hello-world-api-dotnet'
+          token: ${{ secrets.GH_PAT }}
+          workDir: main
+          masterBranchName: main
+          targetBranch: main
+          force: true
+          updateFile: true
+
+  release-stage:
+    name: "🚀 Deploy to STAGE (ArgoCD Sync)"
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - update-image-stage
+    timeout-minutes: 10
+    steps:
+      - name: "🔧 Trigger ArgoCD Sync/Deployment in STAGE"
+        uses: opsverseio/argocd-sync@0.2.0
+        with:
+          address: ${{ secrets.ARGOCD_SERVER }}
+          token: ${{ secrets.ARGOCD_TOKEN }}
+          action: sync
+          appName: ${{ secrets.ARGOCD_PROD_APP_NAME }}
+          disableTlsVerification: "true"
+
+      - name: "🚀 Deploy to STAGE"
+        run: |
+            echo "⏳ Deploying the application to STAGE"
+            echo "🚀✅💚 Successfully synced STAGE ArgoCD and deployed the application to STAGE"
